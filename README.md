@@ -13,6 +13,6 @@ The database tracks files that have been successfully downloaded and added, so i
 
 The database indexing done in the script is very general. You may wish to tweak the indexing for your specific use case.
 
-To run, simply put the script in the directory where you want the database to be created. Ensure you have the required dependencies installed and then from your terminal—or the interactive Python environment of your choice—run:
+To run, simply put the script in the directory where you want the database to be created. Ensure you have the required dependencies installed and then from your terminal—or the interactive Python environment of your choice—run the file. E.g:
 
 >python patentsview_download.py
