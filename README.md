@@ -7,4 +7,4 @@ By default the script will download the publicly-available files. If you wish to
 
 Dependencies: BeautifulSoup, Pandas, and curl.
 
-Downloading will probably take a few days depending on your internet speed. R\This has been tested on a machine w/ 128GB of RAM and it works. If you're working with less RAM, you might need to tweak the parse_tsv() function to chunk the input file.
+Downloading will probably take a few days depending on your internet speed. This has been tested on a machine w/ 128GB of RAM and it works. If you're working with less RAM, you might need to tweak the parse_tsv() function to chunk the input file.
