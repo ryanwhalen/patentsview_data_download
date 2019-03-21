@@ -12,3 +12,7 @@ Downloading will probably take a few days depending on your internet speed. This
 The database tracks files that have been successfully downloaded and added, so if you run into a problem mid-download (e.g. your Internet goes down, or your power goes out), you should be able to run the script again and it will re-start on the last file you were attempting to download
 
 The database indexing done in the script is very general. You may wish to tweak the indexing for your specific use case.
+
+To run, simply put the script in the directory where you want the database to be created. Ensure you have the required dependencies installed and then from your terminal—or the interactive Python environment of your choice—run:
+
+>>python patentsview_download.py
