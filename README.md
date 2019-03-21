@@ -15,4 +15,4 @@ The database indexing done in the script is very general. You may wish to tweak 
 
 To run, simply put the script in the directory where you want the database to be created. Ensure you have the required dependencies installed and then from your terminal—or the interactive Python environment of your choice—run:
 
->>python patentsview_download.py
+>python patentsview_download.py
