@@ -1,5 +1,5 @@
 # patentsview_data_download
-Tool to download public patentsview data and make relational database
+A simple Python script to download public patentsview data and make relational database
 
 Patentsview.org shares high-quality USPTO data. This script will download the various flat files shared by patentsview and use them to create a sqlite database.
 
