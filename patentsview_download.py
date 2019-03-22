@@ -31,7 +31,6 @@ os.chdir(dname)
 #Add them as strings to this list
 detailed_descs = []
 
-
 def get_urls(url):
     '''takes patentsview downloads website url, parses out the .tsv.zip files
     that contain the patent tables, returns a list of urls
@@ -39,7 +38,7 @@ def get_urls(url):
     urls = []
     req = urllib.request.Request(url) 
     html  = urllib.request.urlopen(req)
-    data = html.read() #read in the html
+    data = html.read() 
     data = data.decode()
     soup = BeautifulSoup(data, 'lxml')
     for link in soup.findAll('a', href=True):
@@ -103,6 +102,7 @@ def parse_tsv(url):
 def add_indices():
     '''adds indexes to the db on patent numbers and universal ids
     other indexes might be desired depending on how you plan on using the data'''
+    print("Adding indices")
     tables = cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
     for table in tables:
         table = table[0]
@@ -115,7 +115,7 @@ def add_indices():
         conn.commit()
         
 def make_processed_list():
-    '''makes column in db to track downloaded files in case
+    '''makes table in db to track downloaded files in case
     process is interrupted and needs to start from the middle'''
     cur.execute('''CREATE TABLE IF NOT EXISTS processed (
             url text)''')
@@ -138,7 +138,7 @@ if __name__ == "__main__":
             continue
         parse_tsv(url)
         count += 1
-        print(str(count)+" files processed of "+str(len(urls)-len(processed))+" total files")
+        print(str(count)+" files processed. Files remaining: "+str(len(urls)-len(processed))+" total files")
     add_indices()                     
 
     conn.commit()
