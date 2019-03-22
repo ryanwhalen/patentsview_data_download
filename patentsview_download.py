@@ -58,7 +58,7 @@ def download_file(url):
     while count < 5:
         try:
             os.system('curl -C - -O %s'%url)
-            print("/nFinished Downloading "+url)
+            print("Finished Downloading "+url)
             break
         except:
             print('Error downloading '+url)
@@ -72,7 +72,7 @@ def parse_tsv(url):
     #parse out filename (*.tsv.zip)
     filename = url.split('/')[-1]
     tablename = filename.split('.')[0]
-    print('Downloading '+filename)
+    print('\nDownloading '+filename)
     
     #download and save file
     download_file(url)
@@ -138,7 +138,7 @@ if __name__ == "__main__":
             continue
         parse_tsv(url)
         count += 1
-        print(str(count)+" files processed. Files remaining: "+str(len(urls)-len(processed))+" total files")
+        print(str(count)+" files processed. Files remaining: "+str(len(urls)-len(processed)))
     add_indices()                     
 
     conn.commit()
