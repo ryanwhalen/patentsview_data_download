@@ -32,7 +32,6 @@ os.chdir(dname)
 detailed_descs = []
 
 
-
 def get_urls(url):
     '''takes patentsview downloads website url, parses out the .tsv.zip files
     that contain the patent tables, returns a list of urls
@@ -50,7 +49,7 @@ def get_urls(url):
     return urls
 
   
-def download_file(url, filename):
+def download_file(url):
     '''when downloading large files s3 sometimes
     resets the connection. This caused problems with Python's 
     request and urllib libraries. Calling wget or curl diretly
@@ -60,17 +59,13 @@ def download_file(url, filename):
     while count < 5:
         try:
             os.system('curl -C - -O %s'%url)
-            print("Finished Downloading "+url)
+            print("/nFinished Downloading "+url)
             break
         except:
             print('Error downloading '+url)
             time.sleep(10)
             count += 1
             
-def make_table(tsv_name, tablename):
-    cur.execute('''CREATE TABLE IF NOT EXISTS tablename ''')
-    
-
 def parse_tsv(url):
     '''takes url to a zipped tsv file, downloads, extracts,
     reads into a pandas df, and then subsequently writes to sqlite db'''
@@ -81,8 +76,7 @@ def parse_tsv(url):
     print('Downloading '+filename)
     
     #download and save file
-    #urllib.request.urlretrieve(url, filename)
-    download_file(url, filename)
+    download_file(url)
 
     #unzip file
     zf = zipfile.ZipFile(filename)
@@ -96,10 +90,11 @@ def parse_tsv(url):
     df.columns = df.columns.str.strip()
     df.to_sql(tablename, conn, if_exists = 'append', index=False)
 
-    
+    #track processed files
     cur.execute('''INSERT INTO processed VALUES (?)''',[url])
     conn.commit()
     processed.append(url)
+    
     #cleanup zipped file and tsv file
     if cleanup == True:
         os.remove(filename)
