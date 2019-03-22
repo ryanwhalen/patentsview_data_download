@@ -16,7 +16,7 @@ csv.field_size_limit(sys.maxsize)
 #set cleanup to False if you don't want to delete the
 #zipped archives and TSV files after they've been added to the DB.
 cleanup = True
-get_descs = False
+get_descs = True
 
 
 #sets the path to the python script's location
@@ -30,6 +30,7 @@ os.chdir(dname)
 #If you send patentsview an email they will send you the URLs. 
 #Add them as strings to this list
 detailed_descs = []
+
 
 
 def get_urls(url):
@@ -48,8 +49,7 @@ def get_urls(url):
             urls.append(link)
     return urls
 
-
-    
+  
 def download_file(url, filename):
     '''when downloading large files s3 sometimes
     resets the connection. This caused problems with Python's 
@@ -57,9 +57,11 @@ def download_file(url, filename):
     from python worked better. Takes url and filename, 
     downloads file at url and writes it to cwd'''
     count = 0
-    while count < 10:
+    while count < 5:
         try:
             os.system('curl -C - -O %s'%url)
+            print("Finished Downloading "+url)
+            break
         except:
             print('Error downloading '+url)
             time.sleep(10)
@@ -146,4 +148,3 @@ if __name__ == "__main__":
 
     conn.commit()
     conn.close()
-
