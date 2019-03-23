@@ -16,7 +16,7 @@ csv.field_size_limit(sys.maxsize)
 #set cleanup to False if you don't want to delete the
 #zipped archives and TSV files after they've been added to the DB.
 cleanup = True
-get_descs = True
+get_descs = False
 
 
 #sets the path to the python script's location
@@ -30,6 +30,7 @@ os.chdir(dname)
 #If you send patentsview an email they will send you the URLs. 
 #Add them as strings to this list
 detailed_descs = []
+
 
 def get_urls(url):
     '''takes patentsview downloads website url, parses out the .tsv.zip files
@@ -65,29 +66,72 @@ def download_file(url):
             time.sleep(10)
             count += 1
             
-def parse_tsv(url):
+            
+def clean_file(filename):
+    '''fixes tsv files that have extra quotation marks in them
+    a few of the patentsview files have """""""data"""""" format
+    which breaks the pandas csv parser'''
+    fixed_name = filename+'2'
+    infile = open(os.getcwd()+'/'+filename, 'r', encoding='utf-8')
+    outfile = open(os.getcwd()+'/'+fixed_name, 'w', encoding='utf-8')
+    for line in infile:
+        line = line.replace('"','')
+        outfile.write(line)
+    infile.close()
+    outfile.close()
+    return fixed_name
+            
+            
+def extract_names(url):
+    '''takes url and returns the appropriate file name and db table name'''
+    filename = url.split('/')[-1]
+    tablename = filename.split('.')[0]
+    return filename, tablename
+    
+    
+def unzip_file(filename):
+    '''takes filename and unzips file to cwd
+    returns the name of the unzipped tsv file'''
+    zf = zipfile.ZipFile(filename)
+    zf.extractall()
+    tsv_name = zf.filelist[0].filename
+    zf.close()
+    return tsv_name
+    
+    
+def write_to_db(tsv_name, tablename):
+    '''takes name of unzipped tsv file and db table name and uses pandas 
+    csv_read to read into dataframe and subsequently write to db'''
+    try:
+        df = pd.read_csv(os.getcwd()+'/'+tsv_name, sep='\t', engine='python',
+                     encoding='utf-8')
+    except pd.errors.ParserError as error:
+        print(error)
+        print('Problem parsing ' + tsv_name + ' attempting to fix file.')
+        cleaned_file = clean_file(tsv_name)
+        df = pd.read_csv(os.getcwd()+'/'+cleaned_file, sep='\t', engine='python',
+                     encoding='utf-8')
+        if cleanup == True:
+            os.remove(os.getcwd()+'/'+cleaned_file)
+    df.columns = df.columns.str.strip()
+    df.to_sql(tablename, conn, if_exists = 'append', index=False)
+    
+    
+def download_and_parse_tsv(url):
     '''takes url to a zipped tsv file, downloads, extracts,
     reads into a pandas df, and then subsequently writes to sqlite db'''
     
-    #parse out filename (*.tsv.zip)
-    filename = url.split('/')[-1]
-    tablename = filename.split('.')[0]
+    filename, tablename = extract_names(url)
     print('\nDownloading '+filename)
     
     #download and save file
     download_file(url)
 
     #unzip file
-    zf = zipfile.ZipFile(filename)
-    zf.extractall()
-    tsv_name = zf.filelist[0].filename
-    zf.close()
-    
+    tsv_name = unzip_file(filename)
+
     #read file into pandas df and write to db
-    df = pd.read_csv(os.getcwd()+'/'+tsv_name, sep='\t', engine='python',
-                     encoding='utf-8')
-    df.columns = df.columns.str.strip()
-    df.to_sql(tablename, conn, if_exists = 'append', index=False)
+    write_to_db(tsv_name, tablename)
 
     #track processed files
     cur.execute('''INSERT INTO processed VALUES (?)''',[url])
@@ -98,6 +142,7 @@ def parse_tsv(url):
     if cleanup == True:
         os.remove(filename)
         os.remove(os.getcwd()+'/'+tsv_name)
+
     
 def add_indices():
     '''adds indexes to the db on patent numbers and universal ids
@@ -136,7 +181,7 @@ if __name__ == "__main__":
     for url in urls:
         if url in processed:
             continue
-        parse_tsv(url)
+        download_and_parse_tsv(url)
         count += 1
         print(str(count)+" files processed. Files remaining: "+str(len(urls)-len(processed)))
     add_indices()                     
