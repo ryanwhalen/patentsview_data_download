@@ -10,6 +10,7 @@ import zipfile
 import time
 import csv
 import sys
+import subprocess
 
 csv.field_size_limit(sys.maxsize)
 
@@ -56,14 +57,15 @@ def download_file(url):
     from python worked better. Takes url and filename, 
     downloads file at url and writes it to cwd'''
     count = 0
-    while count < 5:
+    arg = 'curl -C - -O %s'%url
+    while count < 10:    
         try:
-            os.system('curl -C - -O %s'%url)
+            subprocess.run(arg, check = True, shell = True)
             print("Finished Downloading "+url)
             break
         except:
             print('Error downloading '+url)
-            time.sleep(10)
+            time.sleep(30)
             count += 1
             
             
