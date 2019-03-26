@@ -70,7 +70,7 @@ def download_file(url):
 def clean_file(filename):
     '''fixes tsv files that have extra quotation marks in them
     a few of the patentsview files have """""""data"""""" format
-    which breaks the pandas csv parser'''
+    which breaks the pandas csv parser. Returns name of new file.'''
     fixed_name = filename+'2'
     infile = open(os.getcwd()+'/'+filename, 'r', encoding='utf-8')
     outfile = open(os.getcwd()+'/'+fixed_name, 'w', encoding='utf-8')
@@ -86,6 +86,8 @@ def extract_names(url):
     '''takes url and returns the appropriate file name and db table name'''
     filename = url.split('/')[-1]
     tablename = filename.split('.')[0]
+    if 'detail_desc' in tablename:
+        tablename = 'description'    
     return filename, tablename
     
     
