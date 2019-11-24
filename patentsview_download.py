@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import urllib
-import pandas as pd
 import sqlite3 as sqlite
 from bs4 import BeautifulSoup
 import os
@@ -17,7 +16,7 @@ csv.field_size_limit(sys.maxsize)
 #set cleanup to False if you don't want to delete the
 #zipped archives and TSV files after they've been added to the DB.
 cleanup = True
-get_descs = False
+get_descs = True
 
 
 #sets the path to the python script's location
@@ -28,9 +27,9 @@ os.chdir(dname)
 
 
 #these URLs aren't listed publicly on the download page. 
-#If you send patentsview an email they will send you the URLs. 
-#Add them as strings to this list
-detailed_descs = []
+#If you send patentsview an email they will send you a link to the files 
+#Add that URL below
+detailed_desc_url = None
 
 
 def get_urls(url):
@@ -88,7 +87,7 @@ def extract_names(url):
     '''takes url and returns the appropriate file name and db table name'''
     filename = url.split('/')[-1]
     tablename = filename.split('.')[0]
-    if 'detail_desc' in tablename:
+    if 'detail-desc' in tablename:
         tablename = 'description'    
     return filename, tablename
     
@@ -97,28 +96,49 @@ def unzip_file(filename):
     '''takes filename and unzips file to cwd
     returns the name of the unzipped tsv file'''
     zf = zipfile.ZipFile(filename)
-    zf.extractall()
     tsv_name = zf.filelist[0].filename
-    zf.close()
+    try: #some files use proprietary deflate64 compression, so handle resulting errors
+        zf.extractall()
+        zf.close()
+    except:
+        print('Error unzipping, trying subprocess method')
+        arg = 'unzip %s' %filename + ' -d ' + os.getcwd()
+        subprocess.run(arg, check = True, shell = True)
     return tsv_name
+    
+    
+def make_column_args(header):
+    '''takes a TSV header as a row, and returns a string of the 
+    column names and datatypes (assumes all text) to use in creating
+    a new table'''
+    header = ['"'+c+'"' for c in header]
+    columns = ' TEXT, '.join(header)
+    columns = '(' + columns + ' TEXT)'
+    return columns
     
     
 def write_to_db(tsv_name, tablename):
     '''takes name of unzipped tsv file and db table name and uses pandas 
     csv_read to read into dataframe and subsequently write to db'''
-    try:
-        df = pd.read_csv(os.getcwd()+'/'+tsv_name, sep='\t', engine='python',
-                     encoding='utf-8')
-    except pd.errors.ParserError as error:
-        print(error)
-        print('Problem parsing ' + tsv_name + ' attempting to fix file.')
-        cleaned_file = clean_file(tsv_name)
-        df = pd.read_csv(os.getcwd()+'/'+cleaned_file, sep='\t', engine='python',
-                     encoding='utf-8')
-        if cleanup == True:
-            os.remove(os.getcwd()+'/'+cleaned_file)
-    df.columns = df.columns.str.strip()
-    df.to_sql(tablename, conn, if_exists = 'append', index=False)
+    #parse out column names
+    infile = open(os.getcwd()+'/'+tsv_name, 'r', encoding = 'utf-8')
+    reader = csv.reader(infile, delimiter = '\t')
+    
+    count = 0
+    for row in reader:
+        count += 1
+        if count == 1: #on header, make a new table if this one doesn't exist
+            rowsize = len(row) #check length against this to skip malformed rows
+            columns = make_column_args(row)
+            cur.execute('''CREATE TABLE IF NOT EXISTS %s %s''' %(tablename, columns))
+            continue
+        if len(row) != rowsize:
+            continue
+        cur.execute("INSERT INTO " + tablename + " VALUES (" + ",".join(len(row) * ["?"]) + ")", row)
+        if count % 100000 == 0:
+            print('Inserting row '+str(count)+' into '+tablename)
+            conn.commit()
+    conn.commit()
     
     
 def download_and_parse_tsv(url):
@@ -146,21 +166,19 @@ def download_and_parse_tsv(url):
     if cleanup == True:
         os.remove(filename)
         os.remove(os.getcwd()+'/'+tsv_name)
-
     
 def add_indices():
     '''adds indexes to the db on patent numbers and universal ids
     other indexes might be desired depending on how you plan on using the data'''
     print("Adding indices")
-    tables = cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    tables = cur.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
     for table in tables:
         table = table[0]
         reader = cur.execute("SELECT * FROM {}".format(table))
         columns = [c[0] for c in reader.description]
         for column in columns:
-            if column == 'uuid' or column == 'patent_id':
-                cur.execute("""CREATE INDEX {} ON {} ({} ASC)""".format(
-                column+'_index',table, column))
+            if column == 'uuid' or column == 'patent_id' or column == 'id':
+                cur.execute("""CREATE INDEX IF NOT EXISTS {} ON {} ({} ASC)""".format(column+table+'_index',table, column))
         conn.commit()
         
 def make_processed_list():
@@ -173,14 +191,14 @@ def make_processed_list():
     return processed
 
 if __name__ == "__main__":
-    url = 'http://www.patentsview.org/download/'       
-    urls = get_urls(url)
-    conn = sqlite.connect('patent_db.sqlite')
+    data_url = 'http://www.patentsview.org/download/'       
+    urls = get_urls(data_url)
+    conn = sqlite.connect('patent_db2.sqlite')
     cur = conn.cursor()
     processed = make_processed_list()
 
     if get_descs == True:
-        urls = urls + detailed_descs  
+        urls = urls + get_urls(detailed_desc_url)
     count = 0
     for url in urls:
         if url in processed:
