@@ -29,7 +29,7 @@ os.chdir(dname)
 #these URLs aren't listed publicly on the download page. 
 #If you send patentsview an email they will send you a link to the files 
 #Add that URL below
-detailed_desc_url = 'http://www.patentsview.org/download/detail_desc_text.html'
+detailed_desc_url = ''
 
 
 def get_urls(url):
