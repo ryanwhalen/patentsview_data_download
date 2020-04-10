@@ -16,7 +16,7 @@ csv.field_size_limit(sys.maxsize)
 #set cleanup to False if you don't want to delete the
 #zipped archives and TSV files after they've been added to the DB.
 cleanup = True
-get_descs = True
+get_descs = False
 
 
 #sets the path to the python script's location
