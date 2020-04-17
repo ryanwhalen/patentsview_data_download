@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import urllib
-import pandas as pd
 import sqlite3 as sqlite
 from bs4 import BeautifulSoup
 import os
