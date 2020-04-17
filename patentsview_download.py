@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import urllib
+import pandas as pd
 import sqlite3 as sqlite
 from bs4 import BeautifulSoup
 import os
@@ -16,7 +17,8 @@ csv.field_size_limit(sys.maxsize)
 #set cleanup to False if you don't want to delete the
 #zipped archives and TSV files after they've been added to the DB.
 cleanup = True
-get_descs = False
+get_descs = True
+get_claims = True
 
 
 #sets the path to the python script's location
@@ -29,7 +31,10 @@ os.chdir(dname)
 #these URLs aren't listed publicly on the download page. 
 #If you send patentsview an email they will send you a link to the files 
 #Add that URL below
-detailed_desc_url = ''
+detailed_desc_url = None
+claims_url = None
+
+
 
 
 def get_urls(url):
@@ -75,6 +80,8 @@ def extract_names(url):
     tablename = filename.split('.')[0]
     if 'detail-desc' in tablename:
         tablename = 'description'    
+    if 'claim' in tablename:
+        tablename = 'claim'
     return filename, tablename
     
     
@@ -204,9 +211,9 @@ def add_indices():
         reader = cur.execute("SELECT * FROM {}".format(table))
         columns = [c[0] for c in reader.description]
         for column in columns:
-            if column == 'uuid' or column == 'patent_id':
+            if column == 'id' or column == 'patent_id':
                 cur.execute("""CREATE INDEX IF NOT EXISTS {} ON {} ({} ASC)""".format(
-                column+table+'_index',table, column))
+                column+'_'+table+'_index',table, column))
         conn.commit()
         
 def make_processed_list():
@@ -227,6 +234,8 @@ if __name__ == "__main__":
 
     if get_descs == True:
         urls = urls + get_urls(detailed_desc_url)
+    if get_claims == True:
+        urls = urls + get_urls(claims_url)
     count = 0
     for url in urls:
         if url in processed:
