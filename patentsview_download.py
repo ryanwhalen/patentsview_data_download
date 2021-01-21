@@ -6,9 +6,6 @@ Created on Fri Jan 15 14:49:55 2021
 @author: ryan
 """
 
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-
 import urllib
 import sqlite3 as sqlite
 from bs4 import BeautifulSoup
