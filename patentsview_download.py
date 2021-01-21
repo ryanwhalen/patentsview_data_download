@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+Created on Fri Jan 15 14:49:55 2021
+
+@author: ryan
+"""
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 import urllib
 import sqlite3 as sqlite
@@ -15,7 +23,7 @@ csv.field_size_limit(sys.maxsize)
 
 #set cleanup to False if you don't want to delete the
 #zipped archives and TSV files after they've been added to the DB.
-cleanup = True
+cleanup = False
 get_descs = True
 get_claims = True
 
@@ -27,13 +35,9 @@ dname = os.path.dirname(abspath)
 os.chdir(dname)
 
 
-#these URLs aren't listed publicly on the download page. 
-#If you send patentsview an email they will send you a link to the files 
-#Add that URL below
-detailed_desc_url = None
-claims_url = None
-
-
+#Check to see if these have been changed
+detailed_desc_url = 'https://www.patentsview.org/download/detail_desc_text.html'
+claims_url = 'https://www.patentsview.org/download/claims.html'
 
 
 def get_urls(url):
@@ -53,12 +57,15 @@ def get_urls(url):
     return urls
 
   
-def download_file(url):
+def download_file(url, filename):
     '''when downloading large files s3 sometimes
     resets the connection. This caused problems with Python's 
     request and urllib libraries. Calling wget or curl diretly
     from python worked better. Takes url and filename, 
     downloads file at url and writes it to cwd'''
+    filepath = dname + '/' + filename
+    if os.path.isfile(filepath): #if file already exists in directory don't download
+        return None
     count = 0
     arg = 'curl -C - -O %s'%url
     while count < 10:    
@@ -71,14 +78,15 @@ def download_file(url):
             time.sleep(30)
             count += 1
             
-            
-            
+                  
 def extract_names(url):
     '''takes url and returns the appropriate file name and db table name'''
     filename = url.split('/')[-1]
     tablename = filename.split('.')[0]
     if 'detail-desc' in tablename:
-        tablename = 'description'    
+        tablename = 'description' 
+    if 'detail_desc' in tablename:
+        tablename = 'description'
     if 'claim' in tablename:
         tablename = 'claim'
     return filename, tablename
@@ -145,8 +153,20 @@ def write_to_db(tsv_name, tablename):
         if count == 1: #on header, make a new table if this one doesn't exist
             columns = make_column_args(row)
             column_count = len(row)
+            if tablename == 'description' and column_count == 3: #add uuid column for broken 2020 description file
+                columns = ['uuid'] + row
+                columns = make_column_args(columns)
             cur.execute('''CREATE TABLE IF NOT EXISTS %s %s''' %(tablename, columns))
             continue
+        
+        if tablename == 'claim' and len(row) == 7: #fix claim files without last 3 columns
+            row = row + [None, None, None]
+            column_count = 10
+            
+        if tablename == 'description' and len(row) == 3: #fix desc files without uuid column
+            row = [None] + row
+            column_count = 4
+     
         if len(row) == column_count: #skips malformed rows, rare but cause problems when encountered otherwise
             cur.execute("INSERT INTO " + tablename + " VALUES (" + ",".join(len(row) * ["?"]) + ")", row)
         if count % 100000 == 0:
@@ -155,8 +175,8 @@ def write_to_db(tsv_name, tablename):
     
 
 def determine_delimiter(filename):
-    '''Some recent files have used CSV, 
-    this uses first line to guess which delimtier to use
+    '''Some recent files have used CSV rather than tab, 
+    this function uses first line to guess which delimtier to use
     when opening file and returns that character
     if sniffer fails returns tab'''
     infile = open(os.getcwd()+'/'+filename,'r', encoding='utf-8')
@@ -182,7 +202,7 @@ def download_and_parse_tsv(url):
     print('\nDownloading '+filename)
     
     #download and save file
-    download_file(url)
+    download_file(url, filename)
 
     #unzip file
     tsv_name = unzip_file(filename)
